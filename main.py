@@ -37,6 +37,10 @@ async def on_ready():
 
 __in_problem = False
 
+@client.command(name='ping')
+async def ping(ctx):
+    await ctx.send('pong!')
+
 @client.command(name='cd')
 async def cd(ctx, *args):
     f"""
