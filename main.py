@@ -8,13 +8,11 @@ import discord
 from discord.ext import commands
 
 import os
-from dotenv import load_dotenv
 
-import random 
+import random
 import time
 import asyncio
 import json
-import queue
 
 import problem_gen as pg
 
@@ -28,7 +26,6 @@ DEFAULT_POINT_GOAL = 4
 # question_generators = [*problem_type.problems() for problem_type in questions]
 
 
-load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 PREFIX = "&"
 
