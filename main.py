@@ -27,9 +27,13 @@ DEFAULT_POINT_GOAL = 4
 
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-PREFIX = "&"
+DEFAULT_PREFIX = "&"
 
-client = commands.Bot(command_prefix = PREFIX)
+
+def get_prefix(client, ctx):
+    return DEFAULT_PREFIX
+
+client = commands.Bot(command_prefix = get_prefix)
 
 @client.event
 async def on_ready():
@@ -47,14 +51,14 @@ async def cd(ctx, *args):
     Starts a countdown round where members race to solve problems.
     Format is first to x points, each question t seconds.
     Default: t={DEFAULT_TIMER}, x={DEFAULT_POINT_GOAL}.
-    To customize, call {PREFIX}cd with both arguments specified.
+    To customize, call {DEFAULT_PREFIX}cd with both arguments specified.
     """
     if len(args) == 2 and problem_gen.helpers.check_pos_int(args):
         t, x = args
     elif len(args) == 0:
         t, x = 45, 4
     else:
-        await ctx.send(f'Improper arguments to {PREFIX}')
+        await ctx.send(f'Improper arguments to {get_prefix(client, ctx)}')
 
 
 
