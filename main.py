@@ -30,15 +30,22 @@ DEFAULT_PREFIX = "&"
 
 def get_prefix(client, ctx):
     return DEFAULT_PREFIX
+# TODO store prefix by guild in db
 
 client = commands.Bot(command_prefix = get_prefix)
+
+channels_in_session = set()
+
+def check_in_session(channel_id):
+    return channel_id in channels_in_session
+
+def toggle_in_session(channel_id):
+    global channels_in_session
+    channels_in_session ^= {channel_id} # Set symmetric difference
 
 @client.event
 async def on_ready():
     print('Bot ready!')
-
-__in_problem = False
-# TODO check for in problem based on channel, not guild
 
 ############
 # COMMANDS # 
@@ -70,10 +77,12 @@ async def problem(ctx):
     """
     Serves a randomized problem.
     """
-    global __in_problem
-    if __in_problem:
+    if check_in_session(ctx.channel.id):
         await ctx.send('There\'s already an active question in this channel!')
         return
+
+    toggle_in_session(ctx.channel.id)
+
     print('Generating problem...')
 
     prob = random.choice(probs.all_probs)()
@@ -99,7 +108,7 @@ async def problem(ctx):
         await ctx.send(f'Correct, {ans.author.name}! You spent {round(time_spent,3)} seconds.')
         author_id = f'{ans.author.name}#{ans.author.discriminator}'
     finally:
-        __in_problem = False
+        toggle_in_session(ctx.channel.id)
     
 # TODO helper function to serve problems
 # TODO helper function to check answer forms
