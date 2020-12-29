@@ -4,6 +4,10 @@ Inspired by Art of Problem Solving's FTW, which was
 deprecated when Adobe Flash was phased out after 2020.
 """
 
+# COMMENT THESE TWO LINES BEFORE PUSHING TO PROD
+# from dotenv import load_dotenv
+# load_dotenv()
+
 import discord
 from discord.ext import commands
 
@@ -14,21 +18,16 @@ import time
 import asyncio
 import json
 
-import problem_gen as pg
+import problem_gen as probs
+
 
 RECORDS_PATH = 'C:/Users/jettw/Documents/Sophia Tutoring/speed_bot/user_records.json'
 ANS_TOLERANCE = 0.0001
 DEFAULT_TIMER = 45
 DEFAULT_POINT_GOAL = 4
-# PROBLEMS = [f for _, f in problem_gen.__all__]
-
-# %%
-# question_generators = [*problem_type.problems() for problem_type in questions]
-
 
 TOKEN = os.getenv('DISCORD_TOKEN')
 DEFAULT_PREFIX = "&"
-
 
 def get_prefix(client, ctx):
     return DEFAULT_PREFIX
@@ -40,11 +39,17 @@ async def on_ready():
     print('Bot ready!')
 
 __in_problem = False
+# TODO check for in problem based on channel, not guild
+
+############
+# COMMANDS # 
+############
 
 @client.command(name='ping')
 async def ping(ctx):
     await ctx.send('pong!')
 
+# TODO 
 @client.command(name='cd')
 async def cd(ctx, *args):
     f"""
@@ -53,14 +58,12 @@ async def cd(ctx, *args):
     Default: t={DEFAULT_TIMER}, x={DEFAULT_POINT_GOAL}.
     To customize, call {DEFAULT_PREFIX}cd with both arguments specified.
     """
-    if len(args) == 2 and problem_gen.helpers.check_pos_int(args):
+    if len(args) == 2:
         t, x = args
     elif len(args) == 0:
         t, x = 45, 4
     else:
-        await ctx.send(f'Improper arguments to {get_prefix(client, ctx)}')
-
-
+        await ctx.send(f'Improper arguments to {get_prefix(client, ctx)}cd')
 
 
 @client.command(name='p')
@@ -70,11 +73,13 @@ async def problem(ctx):
     """
     global __in_problem
     if __in_problem:
-        await ctx.send('There\'s already an active question!')
+        await ctx.send('There\'s already an active question in this channel!')
         return
     print('Generating problem...')
 
-    question, answer = random.choice(question_generators)()
+    prob = random.choice(probs.all_probs)()
+    question, answer = prob['q'], prob['a']
+
     await ctx.send(question)
     __in_problem = True
     start_time = time.time_ns()
@@ -86,17 +91,22 @@ async def problem(ctx):
             return
     
     try:
-        await client.wait_for('message', timeout=DEFAULT_TIMER, check=check)
+        ans = await client.wait_for('message', timeout=DEFAULT_TIMER, check=check)
     except asyncio.TimeoutError:
         await ctx.send(f'Time out! The answer is {round(answer,3)}.')
         time_spent = DEFAULT_TIMER
     else:
-        await ctx.send(f'Correct! You spent {round(time_spent,3)} seconds.')
         time_spent = (time.time_ns() - start_time)/1e9
-    author_id = f'{ctx.author.name}#{ctx.author.discriminator}'
-    update(author_id,time_spent)
-    __in_problem = False
+        await ctx.send(f'Correct, {ans.author.name}! You spent {round(time_spent,3)} seconds.')
+        author_id = f'{ans.author.name}#{ans.author.discriminator}'
+    finally:
+        __in_problem = False
     
+# TODO helper function to serve problems
+# TODO helper function to check answer forms
+# TODO update stats; connect to db for that
+#           use mongoDB or postgresql?
+
 
 @client.command(name='stats')
 async def stats(ctx):
@@ -130,5 +140,7 @@ def update(user,time_spent):
     record['last 10 times'] = q
     with open(RECORDS_PATH,'w', encoding='utf-8') as f:
         json.dump(all_records, f, indent=2, ensure_ascii=False)
-# %%
-client.run(TOKEN)
+
+
+if __name__ == '__main__':
+    client.run(TOKEN)
