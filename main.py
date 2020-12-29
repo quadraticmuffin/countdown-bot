@@ -5,8 +5,8 @@ deprecated when Adobe Flash was phased out after 2020.
 """
 
 # COMMENT THESE TWO LINES BEFORE PUSHING TO PROD
-# from dotenv import load_dotenv
-# load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
 import discord
 from discord.ext import commands
@@ -17,11 +17,10 @@ import random
 import time
 import asyncio
 import json
+import pymongo
 
 import problem_gen as probs
 
-
-RECORDS_PATH = 'C:/Users/jettw/Documents/Sophia Tutoring/speed_bot/user_records.json'
 ANS_TOLERANCE = 0.0001
 DEFAULT_TIMER = 45
 DEFAULT_POINT_GOAL = 4
@@ -104,42 +103,15 @@ async def problem(ctx):
     
 # TODO helper function to serve problems
 # TODO helper function to check answer forms
-# TODO update stats; connect to db for that
-#           use mongoDB or postgresql?
+# TODO update stats; connect to mongodb for that
 
 
 @client.command(name='stats')
 async def stats(ctx):
-    author_id = f'{ctx.author.name}#{ctx.author.discriminator}'
-    with open(RECORDS_PATH, 'r', encoding='utf-8') as f:
-        try:
-            record = json.load(f)[author_id]
-        except:
-            record = None
-    await ctx.send(f'Stats for {author_id}:'
-        f'{record}')
-    #TODO properly format the stats string
+    pass
 
 def update(user,time_spent):
-    with open(RECORDS_PATH, 'r', encoding='utf-8') as f:
-        all_records = json.load(f)
-    if user not in all_records:
-        last_10 = [-1000] * 9
-        last_10.append(time_spent)
-        all_records[user] = {'problems attempted': 1, 'avg time': time_spent, 
-        'last 10 times': last_10}
-        with open('user_records.json','w', encoding='utf-8') as f:
-            json.dump(all_records, f, indent=2, ensure_ascii=False)
-        return
-    record = all_records[user]
-    record['avg time'] = (record['avg time']*record['problems attempted'] + time_spent)/(record['problems attempted'] + 1)
-    record['problems attempted'] += 1
-    q = record['last 10 times']
-    q.pop(0)
-    q.append(time_spent)
-    record['last 10 times'] = q
-    with open(RECORDS_PATH,'w', encoding='utf-8') as f:
-        json.dump(all_records, f, indent=2, ensure_ascii=False)
+    pass
 
 
 if __name__ == '__main__':

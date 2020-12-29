@@ -152,9 +152,3 @@ def infinite_series():
 
 all_probs = [num_factors, count_divisible, crt_easy, 
     dec_to_bin, sum_of_roots, product_of_roots, infinite_series]
-
-with open('problem_gen.pickle', 'wb') as f:
-    pickle.dump(all_probs, f, pickle.HIGHEST_PROTOCOL)
-
-with open('problem_gen.pickle', 'rb') as f:
-    prob_gen = pickle.load(f)
