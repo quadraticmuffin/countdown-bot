@@ -21,16 +21,25 @@ import pymongo
 
 import problem_gen as probs
 
+DB_URL = os.getenv('MONGODB_URL')
+db = pymongo.MongoClient(DB_URL).discord
+prefixes = db.prefixes
+
 ANS_TOLERANCE = 0.0001
 DEFAULT_TIMER = 45
 DEFAULT_POINT_GOAL = 4
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-DEFAULT_PREFIX = "&"
+DEFAULT_PREFIX = '&'
 
-def get_prefix(client, ctx):
-    return DEFAULT_PREFIX
-# TODO store prefix by guild in db
+def get_prefix(client, message):
+    id_ = message.guild.id
+    res = prefixes.find_one({'guild_id': id_})['prefix']
+    if res is None:
+        prefixes.insert_one({'guild_id': id_, 'prefix': DEFAULT_PREFIX})
+        return DEFAULT_PREFIX
+    else:
+        return res
 
 client = commands.Bot(command_prefix = get_prefix)
 
@@ -44,6 +53,12 @@ def toggle_in_session(channel_id):
     channels_in_session ^= {channel_id} # Set symmetric difference
 
 @client.event
+async def on_guild_join(guild):
+    prefixes.insert_one({'guild_id': guild.id, 'prefix': DEFAULT_PREFIX})
+    print(f'Joined {guild.name}')
+    
+
+@client.event
 async def on_ready():
     print('Bot ready!')
 
@@ -55,7 +70,11 @@ async def on_ready():
 async def ping(ctx):
     await ctx.send('pong!')
 
-# TODO 
+@client.command(name='prefix')
+async def update_prefix(ctx, new_prefix):
+    prefixes.update_one({'guild_id': ctx.guild.id}, {'$set': {'prefix': new_prefix}}, upsert=True)
+    await ctx.send(f"Prefix updated to '{new_prefix}'!")
+
 @client.command(name='cd')
 async def cd(ctx, *args):
     f"""
