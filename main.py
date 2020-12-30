@@ -33,12 +33,12 @@ DEFAULT_PREFIX = '&'
 
 def get_prefix(client, message):
     id_ = message.guild.id
-    res = prefixes.find_one({'guild_id': id_})['prefix']
+    res = prefixes.find_one({'guild_id': id_})
     if res is None:
         prefixes.insert_one({'guild_id': id_, 'prefix': DEFAULT_PREFIX})
         return DEFAULT_PREFIX
     else:
-        return res
+        return res['prefix']
 
 client = commands.Bot(command_prefix = get_prefix)
 
