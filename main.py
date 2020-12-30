@@ -5,8 +5,8 @@ deprecated when Adobe Flash was phased out after 2020.
 """
 
 # COMMENT THESE TWO LINES BEFORE PUSHING TO PROD
-from dotenv import load_dotenv
-load_dotenv()
+# from dotenv import load_dotenv
+# load_dotenv()
 
 import discord
 from discord.ext import commands
@@ -16,7 +16,6 @@ import os
 import random
 import time
 import asyncio
-import json
 import pymongo
 
 import problem_gen as probs
