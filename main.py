@@ -80,7 +80,7 @@ async def _cd(ctx, *args, p=False):
     if len(args) == 2:
         time_limit, win_score = float(args[0]), int(args[1])
     elif len(args) == 0:
-        time_limit, win_score = 45, 4
+        time_limit, win_score = DEFAULT_TIMER, DEFAULT_POINT_GOAL
     else:
         await ctx.send(f'Improper arguments to {get_prefix(client, ctx.message)}cd.')
         await ctx.send(f"See '{get_prefix(client, ctx.message)}help cd' for more help.")
