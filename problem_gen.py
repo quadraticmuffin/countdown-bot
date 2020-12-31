@@ -102,8 +102,8 @@ def num_factors():
     return {'q': q, 'a': a}
 
 def count_divisible():
-    p1 = random.randint(1,1000)
-    p2 = random.randint(p1+100,10000)
+    p1 = random.randint(1,100)
+    p2 = random.randint(p1+10,1000)
     p3 = random.randint(2,20)
     q=(f'How many integers between {p1} and {p2} inclusive are divisible by {p3}?')
     a=len([x for x in range(p1,p2+1) if x % p3 == 0])
