@@ -72,7 +72,8 @@ async def ping(ctx):
     await ctx.send('pong!')
 
 @client.command(name='prefix')
-async def update_prefix(ctx, new_prefix):
+async def update_prefix(ctx, new_prefix): 
+    # TODO require privileges for this
     prefixes.update_one({'guild_id': ctx.guild.id}, {'$set': {'prefix': new_prefix}}, upsert=True)
     await ctx.send(f"Prefix updated to '{new_prefix}'")
 
@@ -113,15 +114,14 @@ async def _cd(ctx, *args, p=False):
                 return (str_ == QUIT_STRING or round(float(str_), 3) == round(answer,3)) and m.channel == ctx.channel
             except ValueError:
                 return
-        
-        msg = None
-        author = None
 
         try:
             msg = await client.wait_for('message', timeout=time_limit, check=correct_or_quit)
             author = msg.author
 
         except asyncio.TimeoutError:
+            msg = None
+            author = None
             await ctx.send(f"Time's up! The answer is {round(answer,3)}.")
             time_spent = time_limit
 
@@ -137,7 +137,10 @@ async def _cd(ctx, *args, p=False):
 
                 idle_start = time.time()
 
-        scorestring = '\n'.join([f'{t[0]}: {t[1]}' for t in sorted(list(scores.items()), key=lambda t: t[1])])
+        if scores:
+            scorestring = '\n'.join([f'{t[0]}: {t[1]}' for t in sorted(list(scores.items()), key=lambda t: t[1])])
+        else:
+            scorestring = "None. Try and fill up this scoreboard, will ya?"
 
         # Exit conditions
         if time.time() - idle_start > IDLE_TIMER:
@@ -150,7 +153,7 @@ async def _cd(ctx, *args, p=False):
         if msg and msg.content.lower().replace(' ', '') == QUIT_STRING:
                 print (f"Concluded cd in guild '{ctx.guild.name}' with id {ctx.guild.id} (manual quit)")
                 await ctx.send(f"CD aborted.")
-                await ctx.send(f"Final scores:\n{scorestring if len(scorestring) else 'none, better luck to all next time!'}")
+                await ctx.send(f"Final scores:\n{scorestring}")
                 toggle_in_session(ctx.channel.id)
                 return
 
@@ -183,8 +186,8 @@ async def cd(ctx, *args):
     await _cd(ctx, *args, p=False)
         
     
-_p_help = f"""Gives a single randomized problem. 
-    """
+_p_help = f"""Gives a single randomized problem.
+"""
 @client.command(name='p')
 async def problem(ctx):
     await _cd(ctx, DEFAULT_TIMER, 1, p=True)    
