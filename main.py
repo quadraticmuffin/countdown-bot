@@ -21,13 +21,15 @@ import pymongo
 import problem_gen as probs
 
 DB_URL = os.getenv('MONGODB_URL')
-db = pymongo.MongoClient(DB_URL).discord
+db_client = pymongo.MongoClient(DB_URL)
+db = db_client.discord
 prefixes = db.prefixes
+user_stats = db.user_stats
 
 ANS_TOLERANCE = 0.0001
 DEFAULT_TIMER = 45
 DEFAULT_POINT_GOAL = 4
-IDLE_TIMER = 60*30
+IDLE_TIMER = 60*10 # seconds
 QUIT_STRING = 'quit'
 
 TOKEN = os.getenv('DISCORD_TOKEN')
@@ -61,16 +63,20 @@ async def on_guild_join(guild):
 
 @client.event
 async def on_ready():
+    global channels_in_session
+    channels_in_session = set()
     print('Bot ready!')
 
 ############
 # COMMANDS # 
 ############
 
-@client.command(name='ping')
+@client.command(name='ping', hidden=True)
 async def ping(ctx):
     await ctx.send('pong!')
 
+_prefix_help = f"""Changes the server's prefix.
+    Only takes """
 @client.command(name='prefix')
 async def update_prefix(ctx, new_prefix): 
     # TODO require privileges for this
@@ -130,10 +136,11 @@ async def _cd(ctx, *args, p=False):
                 time_spent = (time.time_ns() - start_time)/1e9
                 await ctx.send(f'Correct, {author.name}! You spent {round(time_spent,3)} seconds.')
 
-                author_id = f'{author.name}#{author.discriminator}'
+                author_id = f'{author.name}#{author.discriminator}' # TODO fix unclear variable name author_id vs author.id
                 if author_id not in scores:
                     scores[author_id] = 0
                 scores[author_id] += 1
+                update_stats(author.id, time_spent)
 
                 idle_start = time.time()
 
@@ -176,6 +183,7 @@ async def _cd(ctx, *args, p=False):
         await ctx.send(f'Next question in 5 seconds...')
         await asyncio.sleep(5)
 
+
 _cd_help = f"""Starts a countdown round where members race to solve problems.
     Each question t seconds, first to x points.
     Default: t={DEFAULT_TIMER}, x={DEFAULT_POINT_GOAL}.
@@ -184,16 +192,17 @@ _cd_help = f"""Starts a countdown round where members race to solve problems.
 @client.command(name='cd', help=_cd_help)
 async def cd(ctx, *args):
     await _cd(ctx, *args, p=False)
-        
-    
+
+
 _p_help = f"""Gives a single randomized problem.
 """
-@client.command(name='p')
+@client.command(name='p', help=_p_help)
 async def problem(ctx):
-    await _cd(ctx, DEFAULT_TIMER, 1, p=True)    
-
+    # TODO accept t as argument
+    await _cd(ctx, DEFAULT_TIMER, 1, p=True)
 
 # TODO helper function to check answer forms
+
 
 @client.command(name='stats')
 async def stats(ctx, *args):
@@ -201,15 +210,28 @@ async def stats(ctx, *args):
     Takes 1 argument: the username + discriminator of a user, e.g. quadraticmuffins#0561.
     If no arguments, displays the stats of whoever called the command.
     """
-    pass #TODO
+    if not args:
+        user_id = ctx.author.id
+    else:
+        pass #TODO
+
+
+    await ctx.send(f'Stats for {ctx.author.name}#{ctx.author.discriminator}:')
+    stats = user_stats.find_one({'user_id': user_id})
+    if not stats:
+        await ctx.send('None. Solve some problems to get your stats!')
+    else:
+        statstring = '\n'.join(f'{key}: {value}'for key, value in stats.items())
+        await ctx.send(statstring)
+
 
 @client.command(name='clearstats')
 async def clear_stats(ctx):
     """Clears your own stats. You cannot modify anyone else's stats."""
     pass #TODO
 
-def update_stats(user,time_spent):
-    pass #TODO make sure to store discord ids, not discriminators because usernames can change.
+def update_stats(user_id,time_spent):
+    user_stats.update_one({'user_id': user_id}, {'$inc': {'num_solved': 1, 'total_time': time_spent}}, upsert=True)
 
 
 if __name__ == '__main__':
