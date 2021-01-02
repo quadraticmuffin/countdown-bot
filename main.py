@@ -20,6 +20,8 @@ import pymongo
 
 import problem_gen as probs
 
+# TODO add fixie for fixed IP from which to access database
+
 DB_URL = os.getenv('MONGODB_URL')
 db_client = pymongo.MongoClient(DB_URL)
 db = db_client.discord
@@ -136,10 +138,10 @@ async def _cd(ctx, *args, p=False):
                 time_spent = (time.time_ns() - start_time)/1e9
                 await ctx.send(f'Correct, {author.name}! You spent {round(time_spent,3)} seconds.')
 
-                author_id = f'{author.name}#{author.discriminator}' # TODO fix unclear variable name author_id vs author.id
-                if author_id not in scores:
-                    scores[author_id] = 0
-                scores[author_id] += 1
+                author_discname = f'{author.name}#{author.discriminator}'
+                if author_discname not in scores:
+                    scores[author_discname] = 0
+                scores[author_discname] += 1
                 update_stats(author.id, time_spent)
 
                 idle_start = time.time()
@@ -214,7 +216,6 @@ async def stats(ctx, *args):
         user_id = ctx.author.id
     else:
         pass #TODO
-
 
     await ctx.send(f'Stats for {ctx.author.name}#{ctx.author.discriminator}:')
     stats = user_stats.find_one({'user_id': user_id})
