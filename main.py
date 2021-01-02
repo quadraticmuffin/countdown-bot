@@ -5,8 +5,8 @@ deprecated when Adobe Flash was phased out after 2020.
 """
 
 # COMMENT THESE TWO LINES BEFORE PUSHING TO PROD
-# from dotenv import load_dotenv
-# load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
 import discord
 from discord.ext import commands
@@ -228,7 +228,8 @@ async def stats(ctx, *args):
 @client.command(name='clearstats')
 async def clear_stats(ctx):
     """Clears your own stats. You cannot modify anyone else's stats."""
-    pass #TODO
+    user_stats.delete_one({'user_id': ctx.author.id})
+    await ctx.send(f'Stats cleared for {ctx.author.name}#{ctx.author.discriminator}')
 
 def update_stats(user_id,time_spent):
     user_stats.update_one({'user_id': user_id}, {'$inc': {'num_solved': 1, 'total_time': time_spent}}, upsert=True)
