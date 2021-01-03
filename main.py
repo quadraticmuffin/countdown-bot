@@ -25,7 +25,7 @@ import problem_gen as probs
 DB_URL = os.getenv('MONGODB_URL')
 db_client = pymongo.MongoClient(DB_URL)
 db = db_client.discord
-prefixes = db.prefixes
+guild_settings = db.guild_settings
 user_stats = db.user_stats
 
 ANS_TOLERANCE = 0.0001
@@ -35,13 +35,13 @@ IDLE_TIMER = 60*10 # seconds
 QUIT_STRING = 'quit'
 
 TOKEN = os.getenv('DISCORD_TOKEN')
-DEFAULT_PREFIX = '&'
+DEFAULT_PREFIX = 'ftw '
 
 def get_prefix(client, message):
     id_ = message.guild.id
-    res = prefixes.find_one({'guild_id': id_})
+    res = guild_settings.find_one({'guild_id': id_})
     if res is None:
-        prefixes.insert_one({'guild_id': id_, 'prefix': DEFAULT_PREFIX})
+        guild_settings.insert_one({'guild_id': id_, 'prefix': DEFAULT_PREFIX})
         return DEFAULT_PREFIX
     else:
         return res['prefix']
@@ -59,7 +59,7 @@ def toggle_in_session(channel_id):
 
 @client.event
 async def on_guild_join(guild):
-    prefixes.insert_one({'guild_id': guild.id, 'prefix': DEFAULT_PREFIX})
+    guild_settings.insert_one({'guild_id': guild.id, 'prefix': DEFAULT_PREFIX})
     print(f'Joined {guild.name}')
     
 
@@ -77,12 +77,14 @@ async def on_ready():
 async def ping(ctx):
     await ctx.send('pong!')
 
-_prefix_help = f"""Changes the server's prefix.
-    Only takes """
+_prefix_help = f"""Changes the prefix for this bot.
+    Pass argument 'reset' to revert the prefix to '{DEFAULT_PREFIX}'.
+    """
 @client.command(name='prefix')
-async def update_prefix(ctx, new_prefix): 
-    # TODO require privileges for this
-    prefixes.update_one({'guild_id': ctx.guild.id}, {'$set': {'prefix': new_prefix}}, upsert=True)
+@commands.has_permissions(manage_guild=True)
+async def update_prefix(ctx, arg1): 
+    new_prefix = DEFAULT_PREFIX if arg1 == 'reset' else arg1
+    guild_settings.update_one({'guild_id': ctx.guild.id}, {'$set': {'prefix': new_prefix}}, upsert=True)
     await ctx.send(f"Prefix updated to '{new_prefix}'")
 
 async def _cd(ctx, *args, p=False):
@@ -193,6 +195,7 @@ _cd_help = f"""Starts a countdown round where members race to solve problems.
     Type {QUIT_STRING} at any time to exit the session."""
 @client.command(name='cd', help=_cd_help)
 async def cd(ctx, *args):
+
     await _cd(ctx, *args, p=False)
 
 
