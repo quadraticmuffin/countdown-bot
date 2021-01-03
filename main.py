@@ -81,8 +81,11 @@ _prefix_help = f"""Changes the prefix for this bot.
     Pass argument 'reset' to revert the prefix to '{DEFAULT_PREFIX}'.
     """
 @client.command(name='prefix')
-@commands.has_permissions(manage_guild=True)
 async def update_prefix(ctx, arg1): 
+    if not ctx.author.permissions_in(ctx.channel).manage_guild:
+        await ctx.send("This command requires the **manage_guild** permission.")
+        return
+    
     new_prefix = DEFAULT_PREFIX if arg1 == 'reset' else arg1
     guild_settings.update_one({'guild_id': ctx.guild.id}, {'$set': {'prefix': new_prefix}}, upsert=True)
     await ctx.send(f"Prefix updated to '{new_prefix}'")
@@ -195,7 +198,6 @@ _cd_help = f"""Starts a countdown round where members race to solve problems.
     Type {QUIT_STRING} at any time to exit the session."""
 @client.command(name='cd', help=_cd_help)
 async def cd(ctx, *args):
-
     await _cd(ctx, *args, p=False)
 
 
