@@ -5,14 +5,15 @@ deprecated when Adobe Flash was phased out after 2020.
 """
 
 # COMMENT THESE TWO LINES BEFORE PUSHING TO PROD
-# from dotenv import load_dotenv
-# load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
 import discord
 from discord.ext import commands
 
 import os
 
+import math
 import random
 import time
 import asyncio
@@ -28,7 +29,7 @@ db = db_client.discord
 guild_settings = db.guild_settings
 user_stats = db.user_stats
 
-ANS_TOLERANCE = 0.0001
+ANS_PRECISION = 3
 DEFAULT_TIMER = 45
 DEFAULT_POINT_GOAL = 4
 IDLE_TIMER = 60*10 # seconds
@@ -69,6 +70,8 @@ async def on_ready():
     channels_in_session = set()
     print('Bot ready!')
 
+
+
 ############
 # COMMANDS # 
 ############
@@ -89,6 +92,22 @@ async def update_prefix(ctx, arg1):
     new_prefix = DEFAULT_PREFIX if arg1 == 'reset' else arg1
     guild_settings.update_one({'guild_id': ctx.guild.id}, {'$set': {'prefix': new_prefix}}, upsert=True)
     await ctx.send(f"Prefix updated to '{new_prefix}'")
+
+def parse_math(s):
+    if s.count('/') > 1:
+        raise ValueError()
+    elif s.count('/') == 1:
+        try:
+            numer, denom = map(int, s.split('/'))
+            assert probs.gcf(abs(numer), denom) == 1
+            return numer/denom
+        except:
+            raise ValueError('Fractions must be simplified.')
+    else:
+        try:
+            return float(s)
+        except:
+            return s
 
 async def _cd(ctx, *args, p=False):
     if len(args) == 2:
@@ -122,9 +141,14 @@ async def _cd(ctx, *args, p=False):
         start_time = time.time_ns()
 
         def correct_or_quit(m):
-            str_ = m.content.lower().replace(' ', '')
+            str_ = parse_math(m.content.lower().replace(' ', ''))
             try:
-                return (str_ == QUIT_STRING or round(float(str_), 3) == round(answer,3)) and m.channel == ctx.channel
+                isquit = str_ == QUIT_STRING
+                try:
+                    isclose = round(str_, ANS_PRECISION) == round(answer,ANS_PRECISION)
+                except:
+                    isclose = False
+                return (isquit or isclose) and m.channel == ctx.channel
             except ValueError:
                 return
 
@@ -165,11 +189,14 @@ async def _cd(ctx, *args, p=False):
             return
 
         if msg and msg.content.lower().replace(' ', '') == QUIT_STRING:
-                print (f"Concluded cd in guild '{ctx.guild.name}' with id {ctx.guild.id} (manual quit)")
+            if p:
+                await ctx.send(f"Problem aborted.")
+            else:
                 await ctx.send(f"CD aborted.")
                 await ctx.send(f"Final scores:\n{scorestring}")
-                toggle_in_session(ctx.channel.id)
-                return
+            print (f"Concluded cd in guild '{ctx.guild.name}' with id {ctx.guild.id} (manual quit)")
+            toggle_in_session(ctx.channel.id)
+            return
 
         if max(scores.values(), default=0) >= win_score:
             if not p: 
@@ -208,11 +235,9 @@ async def problem(ctx):
     # TODO accept t as argument
     await _cd(ctx, DEFAULT_TIMER, 1, p=True)
 
-# TODO helper function to check answer forms
-
-
 @client.command(name='stats')
 async def stats(ctx, *args):
+    # TODO discord.Member converter
     """Displays the stats for a Discord user.
     Takes 1 argument: the username + discriminator of a user, e.g. quadraticmuffins#0561.
     If no arguments, displays the stats of whoever called the command.
