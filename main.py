@@ -23,6 +23,8 @@ import problem_gen as probs
 
 # TODO add fixie for fixed IP from which to access database
 
+# TODO use nicknames instead of usernames when sending
+
 DB_URL = os.getenv('MONGODB_URL')
 db_client = pymongo.MongoClient(DB_URL)
 db = db_client.discord
@@ -71,7 +73,6 @@ async def on_ready():
     print('Bot ready!')
 
 
-
 ############
 # COMMANDS # 
 ############
@@ -83,7 +84,7 @@ async def ping(ctx):
 _prefix_help = f"""Changes the prefix for this bot.
     Pass argument 'reset' to revert the prefix to '{DEFAULT_PREFIX}'.
     """
-@client.command(name='prefix')
+@client.command(name='prefix', help='_prefix_help')
 async def update_prefix(ctx, arg1): 
     if not ctx.author.permissions_in(ctx.channel).manage_guild:
         await ctx.send("This command requires the **manage_guild** permission.")
@@ -95,7 +96,7 @@ async def update_prefix(ctx, arg1):
 
 def parse_math(s):
     if s.count('/') > 1:
-        raise ValueError()
+        raise ValueError('Improper string.')
     elif s.count('/') == 1:
         try:
             numer, denom = map(int, s.split('/'))
@@ -141,8 +142,8 @@ async def _cd(ctx, *args, p=False):
         start_time = time.time_ns()
 
         def correct_or_quit(m):
-            str_ = parse_math(m.content.lower().replace(' ', ''))
             try:
+                str_ = parse_math(m.content.lower().replace(' ', ''))
                 isquit = str_ == QUIT_STRING
                 try:
                     isclose = round(str_, ANS_PRECISION) == round(answer,ANS_PRECISION)
@@ -165,22 +166,22 @@ async def _cd(ctx, *args, p=False):
         else:
             if msg.content.lower().replace(' ', '') != QUIT_STRING:
                 time_spent = (time.time_ns() - start_time)/1e9
-                await ctx.send(f'Correct, {author.name}! You spent {round(time_spent,3)} seconds.')
+                await ctx.send(f'Correct, {author.mention}! You spent {round(time_spent,3)} seconds.')
 
-                author_discname = f'{author.name}#{author.discriminator}'
-                if author_discname not in scores:
-                    scores[author_discname] = 0
-                scores[author_discname] += 1
+                if author not in scores:
+                    scores[author] = 0
+                scores[author] += 1
                 update_stats(author.id, time_spent)
 
                 idle_start = time.time()
 
         if scores:
-            scorestring = '\n'.join([f'{t[0]}: {t[1]}' for t in sorted(list(scores.items()), key=lambda t: t[1])])
+            scoretuples = sorted(list(scores.items()), key=lambda t: t[1])
+            scorestring = '\n'.join([f'{t[0].mention}: {t[1]}' for t in scoretuples])
         else:
             scorestring = "None. Try and fill up this scoreboard, will ya?"
 
-        # Exit conditions
+        # Exit conditions 
         if time.time() - idle_start > IDLE_TIMER:
             print (f"Concluded cd in guild '{ctx.guild.name}' with id {ctx.guild.id} (idle for {IDLE_TIMER} seconds)")
             await ctx.send(f'CD aborted due to idle channel.')
@@ -198,19 +199,21 @@ async def _cd(ctx, *args, p=False):
             toggle_in_session(ctx.channel.id)
             return
 
+        if p:
+            print (f"Concluded cd in guild '{ctx.guild.name}' with id {ctx.guild.id} (cd = p)")
+            toggle_in_session(ctx.channel.id)
+            return
+
         if max(scores.values(), default=0) >= win_score:
             if not p: 
-                await ctx.send(f'Congrats to the winner, {max(scores, key=scores.get)}!')
+                winner = max(scores, key=scores.get)
+                await ctx.send(f'Congrats to the winner, {winner.mention}!')
                 await asyncio.sleep(1)
                 await ctx.send(f'Final scores:\n{scorestring}')
             print (f"Concluded cd in guild '{ctx.guild.name}' with id {ctx.guild.id} (victory)")
             toggle_in_session(ctx.channel.id)
             return
         
-        if p:
-            print (f"Concluded cd in guild '{ctx.guild.name}' with id {ctx.guild.id} (cd = p)")
-            toggle_in_session(ctx.channel.id)
-            return
         
         # Continue round
         await ctx.send(f'Scores:\n{scorestring}')
@@ -247,7 +250,7 @@ async def stats(ctx, *args):
     else:
         pass #TODO
 
-    await ctx.send(f'Stats for {ctx.author.name}#{ctx.author.discriminator}:')
+    await ctx.send(f'Stats for {ctx.author.mention}:')
     stats = user_stats.find_one({'user_id': user_id})
     if not stats:
         await ctx.send('None. Solve some problems to get your stats!')
@@ -260,7 +263,7 @@ async def stats(ctx, *args):
 async def clear_stats(ctx):
     """Clears your own stats. You cannot modify anyone else's stats."""
     user_stats.delete_one({'user_id': ctx.author.id})
-    await ctx.send(f'Stats cleared for {ctx.author.name}#{ctx.author.discriminator}')
+    await ctx.send(f'Stats cleared for {ctx.author.mention}')
 
 def update_stats(user_id,time_spent):
     user_stats.update_one({'user_id': user_id}, {'$inc': {'num_solved': 1, 'total_time': time_spent}}, upsert=True)
